@@ -6,3 +6,35 @@ page {
   flex-direction: column;
   justify-content: flex-start;
 }
+
+video {
+  width: 100vw;
+}
+
+.danmu {
+  display: flex;
+  align-items: center;
+  margin-top: 10px;
+  padding: 0 5px;
+}
+
+.danmu-input-container {
+  flex-grow: 1;
+}
+
+.danmu-input {
+  background: white;
+  padding: 4px 6px;
+  box-sizing: border-box;
+  height: 32px;
+}
+
+.danmu-btn-container {
+  display: inline-flex;
+  align-items: center;
+}
+
+.danmu-btn {
+  box-sizing: border-box;
+  height: 32px;
+}
