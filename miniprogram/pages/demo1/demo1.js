@@ -1,126 +1,31 @@
 // miniprogram/pages/demo1/demo1.js
-
-function getRandomColor() {
-  const rgb = []
-  for (let i = 0; i < 3; ++i) {
-    let color = Math.floor(Math.random() * 256).toString(16)
-    color = color.length === 1 ? '0' + color : color
-    rgb.push(color)
-  }
-  return '#' + rgb.join('')
-}
+const db = wx.cloud.database()
 
 Page({
+  sendLog: {},
 
-  inputValue: '',
+  colName: 'danmu-list',
 
   /**
    * 页面的初始数据
    */
   data: {
-    src: '',
-    danmuList:
-    [{
-      text: '第 1s 出现的弹幕',
-      color: '#ff0000',
-      time: 1
-    }, {
-      text: '第 3s 出现的弹幕',
-      color: '#ff00ff',
-      time: 3
-    }],
+    videoUrl: 'http://wxsnsdy.tc.qq.com/105/20210/snsdyvideodownload?filekey=30280201010421301f0201690402534804102ca905ce620b1241b726bc41dcff44e00204012882540400&bizid=1023&hy=SH&fileparam=302c020101042530230204136ffd93020457e3c4ff02024ef202031e8d7f02030f42400204045a320a0201000400',
+    // 弹幕输入相关属性
+    lastInputValue: '',
+    inputValue: '',
+    maxDanmuLength: 30,
+    // 视频相关属性
+    currentVideoTime: 0,
+    inputTipContent: '',
+    inputTipShow: false
   },
-
-  bindInputBlur(e) {
-    this.inputValue = e.detail.value
-  },
-
-  bindButtonTap() {
-    const that = this
-    wx.chooseVideo({
-      sourceType: ['album', 'camera'],
-      maxDuration: 60,
-      camera: ['front', 'back'],
-      success(res) {
-        that.setData({
-          src: res.tempFilePath
-        })
-      }
-    })
-  },
-
-  bindVideoEnterPictureInPicture() {
-    console.log('进入小窗模式')
-  },
-
-  bindVideoLeavePictureInPicture() {
-    console.log('退出小窗模式')
-  },
-
-  bindPlayVideo() {
-    console.log('1')
-    this.videoContext.play()
-  },
-  bindSendDanmu() {
-    this.videoContext.sendDanmu({
-      text: this.inputValue,
-      color: getRandomColor()
-    })
-  },
-
-  videoErrorCallback(e) {
-    console.log('视频错误信息:')
-    console.log(e.detail.errMsg)
-  },
-
-  /**
-   * 生命周期函数--监听页面加载
-   */
-  onLoad: function (options) {
-
-  },
-
+  
   /**
    * 生命周期函数--监听页面初次渲染完成
    */
   onReady: function () {
     this.videoContext = wx.createVideoContext('myVideo')
-  },
-
-  /**
-   * 生命周期函数--监听页面显示
-   */
-  onShow: function () {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面隐藏
-   */
-  onHide: function () {
-
-  },
-
-  /**
-   * 生命周期函数--监听页面卸载
-   */
-  onUnload: function () {
-
-  },
-
-  /**
-   * 页面相关事件处理函数--监听用户下拉动作
-   */
-  onPullDownRefresh: function () {
-
-  },
-
-  /**
-   * 页面上拉触底事件的处理函数
-
-   */
-  onReachBottom: function () {
-
   },
 
   /**
@@ -131,6 +36,162 @@ Page({
       title: 'video',
       path: 'page/component/pages/video/video'
     }
-  }
+  },
 
+  /**
+   * 处理视频错误信息
+   */
+  handleBindError(e) {
+    console.log('视频错误信息:', e.detail.errMsg)
+  },
+
+  /**
+   * 处理弹幕输入框
+   */
+  handleInput(e) {
+    this.setData({
+      inputValue: e.detail.value
+    })
+  },
+
+  /**
+   * 监听视频时间变化
+   */
+  async handleTimeUpdate(e) {
+    const currentVideoTime = Math.floor(e.detail.currentTime)
+    const { videoUrl } = this.data
+    const _ = db.command
+
+    this.setData({
+      currentVideoTime
+    })
+    
+    const { data: danmuList } = await db.collection(this.colName)
+      .where(_.and([
+        {
+          videoId: videoUrl
+        },
+        {
+          time: _.gte(currentVideoTime - 1)
+        },
+        {
+          time: _.lte(currentVideoTime + 1)
+        }
+      ]))
+      .limit(50)
+      .get()
+
+    this.showDanmu(danmuList)
+  },
+
+  /**
+   * 弹幕发送前的钩子
+   * 检查弹幕是否合法
+   */
+  async beforeSendDanmu() {
+    const {inputValue, lastInputValue} = this.data;
+
+    if (inputValue.trim().length === 0) {
+      this.setData({
+        inputTipContent: '弹幕长度不能为0',
+        inputTipShow: true
+      })
+      throw new Error('弹幕长度不能为0')
+    }
+
+    if (lastInputValue === inputValue) {
+      this.setData({
+        inputTipContent: '和上一个弹幕相同',
+        inputTipShow: true
+      })
+      throw new Error('和上一个弹幕相同')
+    }
+
+    try {
+      await wx.cloud.callFunction({
+        name: 'textsec',
+        data: {
+          text: inputValue.trim()
+        }
+      })
+    } catch (error) {
+      this.setData({
+        inputTipContent: '弹幕中包含敏感词',
+        inputTipShow: true
+      })
+      throw new Error('弹幕中包含敏感词')
+    }
+  },
+
+  /**
+   * 发送弹幕
+   */
+  async sendDanmu() {
+    await this.beforeSendDanmu();
+
+    const { videoUrl, inputValue, currentVideoTime } = this.data; 
+    
+    const danmu = {
+      text: inputValue.trim(),
+      color: 'red' // 方便看到
+      // color: getRBGColor()
+    }
+
+    let _id = ''
+    try {
+      const res = await db.collection(this.colName).add({
+        data: {
+          ...danmu,
+          videoId: videoUrl,
+          time: currentVideoTime
+        }
+      })
+      _id = res._id
+    } catch (error) {
+      _id = `local-${Date.now()}`
+      console.log('>>> 弹幕发送失败', error.message)
+    }
+
+    this.showDanmu({
+      ...danmu,
+      _id
+    })
+    this.setData({
+      lastInputValue: inputValue,
+      inputValue: ''
+    })
+  },
+
+  /**
+   * 展示弹幕
+   */
+  showDanmu(danmuList) {
+    const { sendLog, videoContext } = this
+    danmuList = Array.isArray(danmuList) ? danmuList : []
+
+    danmuList.forEach(danmu => {
+      if (sendLog[danmu._id]) {
+        return
+      }
+
+      sendLog[danmu._id] = true;
+      videoContext.sendDanmu({
+        text: danmu.text,
+        color: danmu.color
+      })
+    })
+  }
 })
+
+/**
+ * 生成随机的RBG格式的色彩
+ */
+function getRBGColor() {
+  const rgb = []
+  for (let i = 0; i < 3; ++i) {
+    let color = Math.floor(Math.random() * 256).toString(16)
+    color = color.length === 1 ? '0' + color : color
+    rgb.push(color)
+  }
+  return '#' + rgb.join('')
+}
