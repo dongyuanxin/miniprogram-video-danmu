@@ -17,6 +17,7 @@ Page({
     lastInputValue: '',
     inputValue: '',
     maxDanmuLength: 30,
+    danmuSending: false,
     // 视频相关属性
     currentVideoTime: 0,
     inputTipContent: '',
@@ -162,6 +163,9 @@ Page({
    */
   async sendDanmu() {
     await this.beforeSendDanmu();
+    this.setData({
+      danmuSending: true
+    });
 
     const { videoUrl, inputValue, currentVideoTime } = this.data; 
     
@@ -192,8 +196,9 @@ Page({
     })
     this.setData({
       lastInputValue: inputValue,
-      inputValue: ''
-    })
+      inputValue: '',
+      danmuSending: false
+    });
   },
 
   /**

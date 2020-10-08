@@ -17,7 +17,7 @@
 
     <view class="danmu">
       <view class="danmu-btn-container">
-        <button size="mini" bindtap="sendDanmu" class="danmu-btn" type="primary" formType="submit">发送</button>
+        <button size="mini" bindtap="sendDanmu" class="danmu-btn" type="primary" formType="submit" disabled="{{danmuSending}}">发送</button>
       </view>
       <view class="danmu-input-container">
         <input maxlength="{{maxDanmuLength}}" bindinput="handleInput" value="{{inputValue}}" class="weui-input danmu-input" type="text" placeholder="请输入您的弹幕～" />
