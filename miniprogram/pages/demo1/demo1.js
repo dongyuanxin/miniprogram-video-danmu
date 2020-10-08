@@ -5,6 +5,8 @@ Page({
   sendLog: {},
 
   colName: 'danmu-list',
+  
+  watcher: null,
 
   /**
    * 页面的初始数据
@@ -19,6 +21,38 @@ Page({
     currentVideoTime: 0,
     inputTipContent: '',
     inputTipShow: false
+  },
+
+  onLoad: function() {
+    const { videoUrl } = this.data
+    this.watcher = db.collection(this.colName)
+      .where({
+        videoId: videoUrl
+      })
+      .watch({
+        onChange: this.handleWatch,
+        onError: function(err) {
+          console.error('the watch closed because of error', err)
+        }
+      })
+  },
+
+  onUnload: function() {
+    if (this.watcher) {
+      this.watcher.close()
+    }
+  },
+
+  handleWatch: function(snapshot) {
+    console.log('>>> 监听到变化, snapshot is', snapshot);
+    const { currentVideoTime } = this.data
+    const { docChanges } = snapshot;
+    const newDocs = docChanges.filter(item => {
+                        return item.dataType === 'add' && item.time - 5 <= currentVideoTime && item.time + 5 >= currentVideoTime
+                      })
+                      .map(item => item.doc)
+    console.log('>>> newDocs are', newDocs, ';allChangeDocs are', docChanges)
+    this.showDanmu(newDocs)
   },
   
   /**
