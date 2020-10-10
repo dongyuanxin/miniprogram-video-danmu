@@ -26,28 +26,17 @@ Page({
 
   onLoad: function() {
     const { videoUrl } = this.data
-    this.watcher = db.collection(this.colName)
-      .where({
-        videoId: videoUrl
-      })
-      .watch({
-        onChange: this.handleWatch,
-        onError: function(err) {
-          console.error('the watch closed because of error', err)
-        }
-      })
+    // 演示3: 针对 this.colName 中 videoId = this.data.videoUrl 的弹幕开启监听
+    // todo：
+
   },
 
   handleWatch: function(snapshot) {
     const { currentVideoTime } = this.data
-    const { docChanges } = snapshot;
-    const newDocs = docChanges.filter(item => {
-        return item.dataType === 'add' 
-          && item.time - 5 <= currentVideoTime 
-          && item.time + 5 >= currentVideoTime
-      })
-      .map(item => item.doc)
-    this.showDanmu(newDocs)
+    // 演示3：获取弹幕变化，并进行筛选
+    // todo：
+
+    // this.showDanmu(newDocs)
   },
 
   onUnload: function() {
@@ -143,12 +132,9 @@ Page({
     }
 
     try {
-      await wx.cloud.callFunction({
-        name: 'textsec',
-        data: {
-          text: inputValue.trim()
-        }
-      })
+      // 演示2：调用内容检查云函数
+      // todo：
+
     } catch (error) {
       this.setData({
         inputTipContent: '弹幕中包含敏感词',
@@ -163,36 +149,30 @@ Page({
    */
   async sendDanmu() {
     await this.beforeSendDanmu();
-    this.setData({
-      danmuSending: true
-    });
+
+    // 演示1：更新danmuSending，防止用户误触
+    // todo：
 
     const { videoUrl, inputValue, currentVideoTime } = this.data; 
 
     const danmu = {
       text: inputValue.trim(),
-      color: getRBGColor() // 方便看到
+      color: 'red' // 方便看到
     }
 
-    let _id = ''
+    let _id = `local-${Date.now()}`
     try {
-      const res = await db.collection(this.colName).add({
-        data: {
-          ...danmu,
-          videoId: videoUrl,
-          time: currentVideoTime
-        }
-      })
-      _id = res._id
+      // 演示1：将弹幕数据添加到 this.colName 数据集合中
+      // todo：
+
     } catch (error) {
       _id = `local-${Date.now()}` // 本地随机Id
       console.log('>>> 弹幕上传失败', error.message)
     }
 
-    this.showDanmu({
-      ...danmu,
-      _id
-    })
+    // 演示1：展示弹幕
+    // todo：
+
     this.setData({
       lastInputValue: inputValue,
       inputValue: '',
