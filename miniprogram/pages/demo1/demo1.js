@@ -38,22 +38,22 @@ Page({
       })
   },
 
+  handleWatch: function(snapshot) {
+    const { currentVideoTime } = this.data
+    const { docChanges } = snapshot;
+    const newDocs = docChanges.filter(item => {
+        return item.dataType === 'add' 
+          && item.time - 5 <= currentVideoTime 
+          && item.time + 5 >= currentVideoTime
+      })
+      .map(item => item.doc)
+    this.showDanmu(newDocs)
+  },
+
   onUnload: function() {
     if (this.watcher) {
       this.watcher.close()
     }
-  },
-
-  handleWatch: function(snapshot) {
-    console.log('>>> 监听到变化, snapshot is', snapshot);
-    const { currentVideoTime } = this.data
-    const { docChanges } = snapshot;
-    const newDocs = docChanges.filter(item => {
-                        return item.dataType === 'add' && item.time - 5 <= currentVideoTime && item.time + 5 >= currentVideoTime
-                      })
-                      .map(item => item.doc)
-    console.log('>>> newDocs are', newDocs, ';allChangeDocs are', docChanges)
-    this.showDanmu(newDocs)
   },
   
   /**
@@ -168,11 +168,10 @@ Page({
     });
 
     const { videoUrl, inputValue, currentVideoTime } = this.data; 
-    
+
     const danmu = {
       text: inputValue.trim(),
-      color: 'red' // 方便看到
-      // color: getRBGColor()
+      color: getRBGColor() // 方便看到
     }
 
     let _id = ''
@@ -186,8 +185,8 @@ Page({
       })
       _id = res._id
     } catch (error) {
-      _id = `local-${Date.now()}`
-      console.log('>>> 弹幕发送失败', error.message)
+      _id = `local-${Date.now()}` // 本地随机Id
+      console.log('>>> 弹幕上传失败', error.message)
     }
 
     this.showDanmu({
@@ -206,7 +205,7 @@ Page({
    */
   showDanmu(danmuList) {
     const { sendLog, videoContext } = this
-    danmuList = Array.isArray(danmuList) ? danmuList : []
+    danmuList = Array.isArray(danmuList) ? danmuList : [danmuList]
 
     danmuList.forEach(danmu => {
       if (sendLog[danmu._id]) {
