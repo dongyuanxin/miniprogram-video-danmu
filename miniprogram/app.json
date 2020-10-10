@@ -1,5 +1,6 @@
 {
   "pages": [
+    "pages/version1/version1",
     "pages/demo1/demo1"
   ],
   "window": {
